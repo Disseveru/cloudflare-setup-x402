@@ -97,14 +97,30 @@ async function proxyToOrigin(request: Request, env: Env): Promise<Response> {
 }
 
 /**
+ * Normalize a route path for matching by trimming trailing slashes
+ * while preserving the root path.
+ */
+function normalizeRoutePath(path: string): string {
+	if (path === "/") {
+		return path;
+	}
+
+	return path.replace(/\/+$/, "") || "/";
+}
+
+/**
  * Check if a path matches a route pattern
  * Supports exact matches and prefix matches with /* wildcard
  */
 function pathMatchesPattern(path: string, pattern: string): boolean {
+	const normalizedPath = normalizeRoutePath(path);
+
 	if (pattern.endsWith("/*")) {
-		return path.startsWith(pattern.slice(0, -2));
+		const base = normalizeRoutePath(pattern.slice(0, -2));
+		return normalizedPath === base || normalizedPath.startsWith(`${base}/`);
 	}
-	return path === pattern;
+
+	return normalizedPath === normalizeRoutePath(pattern);
 }
 
 /**
