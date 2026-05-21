@@ -1,74 +1,30 @@
 import { Hono } from 'hono'
-import { empireRouter } from './empire'
+import { xaiRouter } from './xai'   // xAI Services (rebranded)
 
-// Clean main worker for x402-sandbox-1
-// Includes: Empire services + original sandbox logic + SKILL.md for agentic.market discovery
-const app = new Hono<{ Bindings: { XAI_API_KEY?: string; PAYMENT_ADDRESS?: string; SKILL_MD_CONTENT?: string } }>()
+// Clean worker with xAI services mounted early
+const app = new Hono<{ Bindings: { XAI_API_KEY?: string } }>()
 
-// Mount the full x402Empire suite
-app.route('/empire', empireRouter)
+// Mount xAI services BEFORE any wildcard middleware
+app.route('/xai', xaiRouter)
 
-// === Original Sandbox + Bazaar Discovery Support ===
-
-// 1. SKILL.md for automatic discovery on agentic.market
+// SKILL.md for agentic.market / Bazaar discovery
 app.get('/SKILL.md', (c) => {
-  const content = c.env.SKILL_MD_CONTENT || '# x402Empire Sandbox\n\nHigh-demand niche x402 services ready for agents.'
-  return new Response(content, {
+  return new Response('# xAI + x402 Services\n\nHigh-demand niche tools powered by xAI/Grok and x402 micropayments.', {
     headers: { 'Content-Type': 'text/markdown' }
   })
 })
 
-// 2. Basic x402-style payment check (simple version)
-app.use('/api/*', async (c, next) => {
-  const paymentHash = c.req.header('payment-signature')
-  if (!paymentHash && c.req.path !== '/api/simulate') {
-    return c.json({
-      error: 'Payment Required',
-      amount: '0.001',
-      asset: 'USDC',
-      network: 'base'
-    }, 402)
-  }
-  await next()
-})
-
-// 3. Original simulate endpoint
-app.post('/api/simulate', async (c) => {
-  try {
-    const data = await c.req.json()
-    return c.json({
-      status: 'success',
-      result: 'Simulation passed',
-      logs: ['Analyzed payload', 'State change: none', 'Risk: Low'],
-      received_payload: data
-    })
-  } catch (e) {
-    return c.json({ error: 'Invalid JSON payload' }, 400)
-  }
-})
-
-// Health check
+// Basic health
 app.get('/', (c) => {
-  const hasXaiKey = !!c.env.XAI_API_KEY
   return c.json({
     status: 'ok',
-    message: 'x402Empire Sandbox is live',
-    empire_services: 4,
-    xai_key_detected: hasXaiKey,
+    message: 'x402 Sandbox with xAI Services',
+    xai_services: ['vertical-narrative-signal', 'wallet-risk-scorer', 'niche-trend-pulse', 'agent-signal-monitor'],
     routes: {
-      empire: '/empire/*',
-      skill: '/SKILL.md',
-      simulate: '/api/simulate'
+      xai: '/xai/*',
+      skill: '/SKILL.md'
     },
-    ready_for_agentic_market: true
-  })
-})
-
-// Config endpoint (no secrets exposed)
-app.get('/config', (c) => {
-  return c.json({
-    xai_key_present: !!c.env.XAI_API_KEY,
-    payment_configured: !!c.env.PAYMENT_ADDRESS
+    xai_key_detected: !!c.env.XAI_API_KEY
   })
 })
 
