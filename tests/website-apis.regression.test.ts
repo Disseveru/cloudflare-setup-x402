@@ -1,16 +1,22 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { Hono } from "hono";
+import type { Context } from "hono";
 import {
 	handleCompliance,
 	handleEnrich,
 	handleExtract,
 } from "../src/website-apis";
+import type { AppContext } from "../src/env";
 
 const app = new Hono();
-app.all("/api/enrich", (c) => handleEnrich(c as never));
-app.all("/api/compliance", (c) => handleCompliance(c as never));
-app.all("/api/extract", (c) => handleExtract(c as never));
+for (const method of ["get", "post"] as const) {
+	app[method]("/api/enrich", (c) => handleEnrich(c as Context<AppContext>));
+	app[method]("/api/compliance", (c) =>
+		handleCompliance(c as Context<AppContext>)
+	);
+	app[method]("/api/extract", (c) => handleExtract(c as Context<AppContext>));
+}
 
 const SAMPLE_HTML = `
 <!doctype html>
@@ -39,9 +45,13 @@ const SAMPLE_HTML = `
 </html>
 `;
 
-function htmlResponse(body: string, contentType = "text/html; charset=utf-8") {
+function htmlResponse(
+	body: string,
+	contentType = "text/html; charset=utf-8",
+	status = 200
+) {
 	return new Response(body, {
-		status: 200,
+		status,
 		headers: {
 			"content-type": contentType,
 		},

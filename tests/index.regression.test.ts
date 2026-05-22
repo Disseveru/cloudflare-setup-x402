@@ -57,30 +57,36 @@ test("returns x402 payment requirement when enrich path is protected", async () 
 });
 
 test("bypasses payment with bot-management exception and enforces method guard", async () => {
-	const request = new Request("http://localhost/api/enrich?url=example.com", {
-		method: "PUT",
-	});
-	(request as Request & { cf?: unknown }).cf = {
-		botManagement: {
-			score: 99,
-			detectionIds: [],
-		},
-	};
-
-	const response = await app.request(
-		request,
-		undefined,
-		makeEnv([
+	for (const method of ["PUT", "DELETE", "PATCH", "OPTIONS"] as const) {
+		const request = new Request(
+			"http://localhost/api/enrich?url=https://example.com",
 			{
-				pattern: "/api/enrich",
-				price: "$0.01",
-				description: "Lead enrichment signals",
-				bot_score_threshold: 30,
+				method,
+			}
+		);
+		(request as Request & { cf?: unknown }).cf = {
+			botManagement: {
+				// A high score (above 30 threshold) represents likely human traffic.
+				score: 99,
+				detectionIds: [],
 			},
-		])
-	);
+		};
 
-	assert.equal(response.status, 405);
-	const json = (await response.json()) as { error: string };
-	assert.equal(json.error, "Method not allowed. Use GET or POST.");
+		const response = await app.request(
+			request,
+			undefined,
+			makeEnv([
+				{
+					pattern: "/api/enrich",
+					price: "$0.01",
+					description: "Lead enrichment signals",
+					bot_score_threshold: 30,
+				},
+			])
+		);
+
+		assert.equal(response.status, 405);
+		const json = (await response.json()) as { error: string };
+		assert.equal(json.error, "Method not allowed. Use GET or POST.");
+	}
 });
