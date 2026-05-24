@@ -1,5 +1,3 @@
-import { WorkerDefinition } from "@cloudflare/workers-sdk";
-
 export interface GenerateApiInput {
   apiName: string;
   purposeDescription: string;
@@ -26,7 +24,7 @@ export const deployX402WorkerTool = {
     required: ["apiName", "purposeDescription", "suggestedPriceUsdc"]
   },
   run: async (input: GenerateApiInput, env: any): Promise<string> => {
-    const targetUrl = `https://${input.apiName}.${env.CLOUDFLARE_SUBDOMAIN}.workers.dev/api`;
+    const targetUrl = `https://${input.apiName}.${env.CLOUDFLARE_SUBDOMAIN || 'workers'}.dev/api`;
     return JSON.stringify({
       status: "success",
       message: `Successfully generated and deployed ${input.apiName} to the edge network.`,
@@ -60,7 +58,7 @@ export const registerOnBazaarTool = {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${env.CDP_API_KEY}`
+          "Authorization": `Bearer ${env.CDP_API_KEY || ''}`
         },
         body: JSON.stringify({
           resource: {
