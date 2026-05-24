@@ -19,6 +19,11 @@
 				"price": "$0.01",
 				"description": "Access to xAI services",
 			},
+			{
+				"pattern": "/api/simulate",
+				"price": "$0.02",
+				"description": "Shadow State Sandbox - AI-powered simulation environment",
+			},
 		],
 		"FACILITATOR_URL": "https://x402.org/facilitator",
 	},

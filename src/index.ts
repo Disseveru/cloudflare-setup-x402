@@ -6,6 +6,8 @@ import { createProtectedRoute, type ProtectedRouteConfig } from "./auth";
 import { generateJWT } from "./jwt";
 import { hasBotManagementException } from "./bot-management";
 import type { AppContext, Env } from "./env";
+import { createXai } from "@ai-sdk/xai";
+import { generateText } from "ai";
 
 const app = new Hono<AppContext>();
 
@@ -319,6 +321,181 @@ app.get("/__x402/protected", (c) => {
 		timestamp: Date.now(),
 		note: "This endpoint always requires payment or valid authentication cookie",
 	});
+});
+
+/**
+ * Shadow State Sandbox - AI-powered simulation environment
+ * POST /api/simulate
+ *
+ * Protected by x402 payment system ($0.02 USDC on Base mainnet)
+ * Uses Grok AI via xAI SDK to provide intelligent simulation analysis
+ *
+ * Accepts rich JSON payload describing what to simulate and returns
+ * detailed analysis including success prediction, gas estimates, and AI insights
+ */
+app.post("/api/simulate", async (c) => {
+	try {
+		// Validate XAI_API_KEY is configured
+		if (!c.env.XAI_API_KEY) {
+			return c.json(
+				{
+					error:
+						"Server misconfigured: XAI_API_KEY not set. Contact administrator.",
+					simulation_status: "error",
+					timestamp: Date.now(),
+				},
+				500
+			);
+		}
+
+		// Parse request body
+		let payload: unknown;
+		try {
+			payload = await c.req.json();
+		} catch {
+			return c.json(
+				{
+					error: "Invalid JSON payload",
+					simulation_status: "error",
+					timestamp: Date.now(),
+				},
+				400
+			);
+		}
+
+		// Validate payload structure
+		if (!payload || typeof payload !== "object") {
+			return c.json(
+				{
+					error: "Payload must be a valid JSON object",
+					simulation_status: "error",
+					timestamp: Date.now(),
+				},
+				400
+			);
+		}
+
+		const simulationPayload = payload as Record<string, unknown>;
+
+		// Build comprehensive analysis prompt for Grok
+		const analysisPrompt = `You are an expert blockchain and code simulation analyzer. Analyze the following simulation request and provide detailed insights.
+
+Simulation Request:
+${JSON.stringify(simulationPayload, null, 2)}
+
+Provide a comprehensive analysis in the following JSON structure:
+{
+  "would_succeed": boolean (true if likely to succeed, false otherwise),
+  "confidence": number (0-100, confidence percentage in your prediction),
+  "estimated_gas": number or null (estimated gas units if blockchain transaction),
+  "estimated_cost": string or null (estimated cost in USD if applicable),
+  "potential_issues": [
+    {
+      "severity": "critical" | "high" | "medium" | "low",
+      "issue": "description of the issue",
+      "recommendation": "how to fix or mitigate"
+    }
+  ],
+  "dry_run_logs": [
+    "step-by-step trace of what would happen"
+  ],
+  "simulated_output": any (expected output or result),
+  "grok_analysis": {
+    "summary": "brief summary of the simulation",
+    "key_findings": ["important findings"],
+    "recommendations": ["actionable recommendations"],
+    "risk_level": "low" | "medium" | "high" | "critical"
+  }
+}
+
+IMPORTANT: Respond ONLY with valid JSON, no other text. Be thorough and accurate.`;
+
+		// Call Grok AI for intelligent analysis
+		const xaiProvider = createXai({
+			apiKey: c.env.XAI_API_KEY,
+		});
+		const startTime = Date.now();
+		const { text: grokResponse } = await generateText({
+			model: xaiProvider("grok-2-1212"),
+			prompt: analysisPrompt,
+			maxRetries: 2,
+		});
+		const analysisTime = Date.now() - startTime;
+
+		// Parse Grok's response
+		let analysis: Record<string, unknown>;
+		try {
+			// Extract JSON from response (in case Grok adds extra text)
+			const jsonMatch = grokResponse.match(/\{[\s\S]*\}/);
+			if (!jsonMatch) {
+				throw new Error("No JSON found in response");
+			}
+			analysis = JSON.parse(jsonMatch[0]);
+		} catch {
+			// Fallback if Grok didn't return valid JSON
+			analysis = {
+				would_succeed: false,
+				confidence: 50,
+				estimated_gas: null,
+				estimated_cost: null,
+				potential_issues: [
+					{
+						severity: "medium",
+						issue: "AI analysis failed to parse",
+						recommendation: "Review simulation manually",
+					},
+				],
+				dry_run_logs: ["Analysis parsing failed"],
+				simulated_output: null,
+				grok_analysis: {
+					summary: "Unable to parse AI response",
+					key_findings: ["Response format error"],
+					recommendations: ["Retry simulation"],
+					risk_level: "medium",
+				},
+			};
+		}
+
+		// Build comprehensive response
+		const response = {
+			simulation_status: "completed",
+			would_succeed: analysis.would_succeed || false,
+			confidence: analysis.confidence || 0,
+			estimated_gas: analysis.estimated_gas || null,
+			estimated_cost: analysis.estimated_cost || null,
+			potential_issues: analysis.potential_issues || [],
+			dry_run_logs: analysis.dry_run_logs || [],
+			simulated_output: analysis.simulated_output || null,
+			grok_analysis: analysis.grok_analysis || {
+				summary: "Analysis completed",
+				key_findings: [],
+				recommendations: [],
+				risk_level: "low",
+			},
+			timestamp: Date.now(),
+			analysis_time_ms: analysisTime,
+			rate_limit_hint:
+				"This endpoint is rate-limited. Each simulation costs $0.02 USDC.",
+		};
+
+		return c.json(response, 200);
+	} catch (error) {
+		// Handle errors gracefully
+		const errorMessage =
+			error instanceof Error ? error.message : "Unknown error";
+
+		return c.json(
+			{
+				error: "Simulation failed",
+				details: errorMessage,
+				simulation_status: "error",
+				timestamp: Date.now(),
+				rate_limit_hint:
+					"Service temporarily unavailable. Please retry in a moment.",
+			},
+			500
+		);
+	}
 });
 
 export default app;

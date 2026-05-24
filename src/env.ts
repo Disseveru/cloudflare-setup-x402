@@ -10,6 +10,8 @@ import type { JWTPayload } from "./jwt";
 export interface Env extends Omit<CloudflareBindings, "ORIGIN_URL"> {
 	/** Secret for signing JWT tokens - set via .dev.vars locally or `wrangler secret put` in production */
 	JWT_SECRET: string;
+	/** xAI API key for Grok integration - set via .dev.vars locally or `wrangler secret put` in production */
+	XAI_API_KEY: string;
 	/**
 	 * Optional origin URL for External Origin mode.
 	 * When set, requests are rewritten to this URL instead of using DNS-based routing.
