@@ -56,4 +56,4 @@ jobs:
           secrets: |
             JWT_SECRET
         env:
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET || 'preview-secret-not-configured-for-testing-only-do-not-use-in-production' }}
