@@ -227,8 +227,14 @@ export function createProtectedRoute(config: ProtectedRouteConfig) {
 			.register(network, new ExactEvmScheme())
 			.registerExtension(bazaarResourceServerExtension);
 
-		// Initialize resource server to fetch supported payment schemes from facilitator
-		await resourceServer.initialize();
+		// Try to initialize resource server to fetch supported payment schemes
+		try {
+			await resourceServer.initialize();
+		} catch (error) {
+			// Log initialization error but continue - the SDK should still work
+			// for creating 402 responses even if it can't validate facilitator support
+			console.warn("Failed to initialize resource server:", error);
+		}
 
 		// Create route configuration for x402 v2
 		const routeKey = `${method} ${routeTemplate}`;
