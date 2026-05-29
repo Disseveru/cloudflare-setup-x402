@@ -1,7 +1,11 @@
 import "./tools";
 import { Hono } from "hono";
 import { setCookie } from "hono/cookie";
-import { createProtectedRoute, extractPathParams, type ProtectedRouteConfig } from "./auth";
+import {
+	createProtectedRoute,
+	extractPathParams,
+	type ProtectedRouteConfig,
+} from "./auth";
 import { generateJWT } from "./jwt";
 import { hasBotManagementException } from "./bot-management";
 import type { AppContext, Env } from "./env";
@@ -53,17 +57,12 @@ async function proxyToOrigin(request: Request, env: Env): Promise<Response> {
 					statusText: response.statusText,
 					headers: newHeaders,
 				});
-			} catch { }
+			} catch {}
 		}
 		return response;
 	}
 
 	return fetch(request);
-}
-
-function normalizeRoutePath(path: string): string {
-	if (path === "/") return path;
-	return path.replace(/\/+$/, "") || "/";
 }
 
 /**
@@ -85,7 +84,9 @@ function findProtectedRouteConfig(
 	patterns: ProtectedRouteConfig[]
 ): ProtectedRouteConfig | null {
 	const allRoutes = [...BUILTIN_PROTECTED_PATHS, ...patterns];
-	return allRoutes.find((config) => pathMatchesPattern(path, config.pattern)) ?? null;
+	return (
+		allRoutes.find((config) => pathMatchesPattern(path, config.pattern)) ?? null
+	);
 }
 
 // ROOT ROUTE — prevents proxy loop on workers.dev
@@ -121,7 +122,8 @@ app.use("*", async (c, next) => {
 		if (!c.env.JWT_SECRET) {
 			return c.json(
 				{
-					error: "Server misconfigured: JWT_SECRET not set. See README for setup instructions.",
+					error:
+						"Server misconfigured: JWT_SECRET not set. See README for setup instructions.",
 				},
 				500
 			);
@@ -231,4 +233,3 @@ app.get("/__x402/protected", (c) => {
 });
 
 export default app;
-				

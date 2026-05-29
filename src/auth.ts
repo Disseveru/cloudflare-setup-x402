@@ -126,7 +126,10 @@ export function patternToRouteTemplate(pattern: string): string {
  * @param pattern - Route pattern (e.g., "/users/:id")
  * @returns Extracted parameters or null if path doesn't match pattern
  */
-export function extractPathParams(path: string, pattern: string): PathParams | null {
+export function extractPathParams(
+	path: string,
+	pattern: string
+): PathParams | null {
 	// Normalize paths
 	const normalizedPath = path.replace(/\/+$/, "") || "/";
 	const normalizedPattern = pattern.replace(/\/+$/, "") || "/";
@@ -135,21 +138,21 @@ export function extractPathParams(path: string, pattern: string): PathParams | n
 	const paramNames: string[] = [];
 	let regexPattern = normalizedPattern;
 
-	// Handle :param syntax
-	regexPattern = regexPattern.replace(/:([a-zA-Z0-9_]+)/g, (_, name) => {
-		paramNames.push(name);
-		return "([^/]+)";
-	});
-
-	// Handle /* wildcard - convert to named param
-	if (regexPattern.endsWith("/\\*")) {
-		regexPattern = regexPattern.replace(/\/\\\*$/, "/(.*)");
+	// Handle /* wildcard first - convert to named param
+	if (regexPattern.endsWith("/*")) {
+		regexPattern = regexPattern.slice(0, -2) + "/(.*)";
 		paramNames.push("var1");
+	} else {
+		// Handle :param syntax
+		regexPattern = regexPattern.replace(/:([a-zA-Z0-9_]+)/g, (_, name) => {
+			paramNames.push(name);
+			return "([^/]+)";
+		});
 	}
 
 	// Exact match for non-parameterized routes
 	if (paramNames.length === 0) {
-		return normalizedPath === regexPattern ? {} : null;
+		return normalizedPath === normalizedPattern ? {} : null;
 	}
 
 	// Match and extract params
@@ -202,18 +205,24 @@ export function createProtectedRoute(config: ProtectedRouteConfig) {
 		// Convert network string to CAIP-2 format if needed
 		// base -> eip155:8453, base-sepolia -> eip155:84532
 		const networkMap: Record<string, `${string}:${string}`> = {
-			"base": "eip155:8453",
+			base: "eip155:8453",
 			"base-sepolia": "eip155:84532",
 		};
-		const network = (networkMap[c.env.NETWORK] || c.env.NETWORK) as `${string}:${string}`;
+		const network = (networkMap[c.env.NETWORK] ||
+			c.env.NETWORK) as `${string}:${string}`;
 
 		// Create facilitator client
-		const facilitatorUrl = c.env.FACILITATOR_URL || "https://facilitator.x402.org";
-		const facilitatorClient = new HTTPFacilitatorClient({ url: facilitatorUrl });
+		const facilitatorUrl =
+			c.env.FACILITATOR_URL || "https://facilitator.x402.org";
+		const facilitatorClient = new HTTPFacilitatorClient({
+			url: facilitatorUrl,
+		});
 
 		// Create resource server with EVM scheme
-		const resourceServer = new x402ResourceServer(facilitatorClient)
-			.register(network, new ExactEvmScheme());
+		const resourceServer = new x402ResourceServer(facilitatorClient).register(
+			network,
+			new ExactEvmScheme()
+		);
 
 		// Create route configuration for x402 v2
 		const routeKey = `${method} ${routeTemplate}`;
@@ -234,7 +243,13 @@ export function createProtectedRoute(config: ProtectedRouteConfig) {
 		}
 
 		// Add Bazaar discovery extension if path params schema is specified
-		if (config.pathParamsSchema || config.outputExample || config.serviceName || config.tags || config.iconUrl) {
+		if (
+			config.pathParamsSchema ||
+			config.outputExample ||
+			config.serviceName ||
+			config.tags ||
+			config.iconUrl
+		) {
 			const extensionConfig: any = {};
 
 			// Add path params schema
@@ -269,7 +284,13 @@ export function createProtectedRoute(config: ProtectedRouteConfig) {
 
 		// Create payment middleware
 		// Disable facilitator sync on startup to avoid initialization errors
-		const paymentMw = paymentMiddleware(routes, resourceServer, undefined, undefined, false);
+		const paymentMw = paymentMiddleware(
+			routes,
+			resourceServer,
+			undefined,
+			undefined,
+			false
+		);
 
 		// Apply the combined auth/payment middleware
 		return await requirePaymentOrCookie(paymentMw)(c, next);
