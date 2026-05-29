@@ -227,6 +227,9 @@ export function createProtectedRoute(config: ProtectedRouteConfig) {
 			.register(network, new ExactEvmScheme())
 			.registerExtension(bazaarResourceServerExtension);
 
+		// Initialize resource server to fetch supported payment schemes from facilitator
+		await resourceServer.initialize();
+
 		// Create route configuration for x402 v2
 		const routeKey = `${method} ${routeTemplate}`;
 		const routeConfig: any = {
@@ -287,13 +290,12 @@ export function createProtectedRoute(config: ProtectedRouteConfig) {
 		};
 
 		// Create payment middleware
-		// Disable facilitator sync on startup to avoid initialization errors
 		const paymentMw = paymentMiddleware(
 			routes,
 			resourceServer,
 			undefined,
 			undefined,
-			false
+			false // Sync disabled since we call initialize() manually above
 		);
 
 		// Apply the combined auth/payment middleware
