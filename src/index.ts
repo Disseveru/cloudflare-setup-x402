@@ -1,7 +1,7 @@
 import "./tools";
 import { Hono } from "hono";
 import { setCookie } from "hono/cookie";
-import { createProtectedRoute, type ProtectedRouteConfig } from "./auth";
+import { createProtectedRoute, extractPathParams, type ProtectedRouteConfig } from "./auth";
 import { generateJWT } from "./jwt";
 import { hasBotManagementException } from "./bot-management";
 import type { AppContext, Env } from "./env";
@@ -66,13 +66,18 @@ function normalizeRoutePath(path: string): string {
 	return path.replace(/\/+$/, "") || "/";
 }
 
+/**
+ * Check if a path matches a pattern
+ * Now supports dynamic routes with :param syntax and /* wildcards
+ *
+ * @param path - Request path to check
+ * @param pattern - Route pattern (e.g., "/users/:id", "/premium/*")
+ * @returns True if path matches pattern
+ */
 function pathMatchesPattern(path: string, pattern: string): boolean {
-	const normalizedPath = normalizeRoutePath(path);
-	if (pattern.endsWith("/*")) {
-		const base = normalizeRoutePath(pattern.slice(0, -2));
-		return normalizedPath === base || normalizedPath.startsWith(`${base}/`);
-	}
-	return normalizedPath === normalizeRoutePath(pattern);
+	// Use extractPathParams to check if path matches pattern
+	const params = extractPathParams(path, pattern);
+	return params !== null;
 }
 
 function findProtectedRouteConfig(
