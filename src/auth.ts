@@ -8,7 +8,10 @@ import { verifyJWT } from "./jwt";
 import { paymentMiddleware, x402ResourceServer } from "@x402/hono";
 import { HTTPFacilitatorClient } from "@x402/core/server";
 import { ExactEvmScheme } from "@x402/evm/exact/server";
-import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
+import {
+	declareDiscoveryExtension,
+	bazaarResourceServerExtension,
+} from "@x402/extensions/bazaar";
 import type { AppContext } from "./env";
 
 /**
@@ -211,18 +214,18 @@ export function createProtectedRoute(config: ProtectedRouteConfig) {
 		const network = (networkMap[c.env.NETWORK] ||
 			c.env.NETWORK) as `${string}:${string}`;
 
-		// Create facilitator client
+		// Create facilitator client with CDP facilitator
 		const facilitatorUrl =
-			c.env.FACILITATOR_URL || "https://facilitator.x402.org";
+			c.env.FACILITATOR_URL ||
+			"https://api.cdp.coinbase.com/platform/v2/x402";
 		const facilitatorClient = new HTTPFacilitatorClient({
 			url: facilitatorUrl,
 		});
 
-		// Create resource server with EVM scheme
-		const resourceServer = new x402ResourceServer(facilitatorClient).register(
-			network,
-			new ExactEvmScheme()
-		);
+		// Create resource server with EVM scheme and Bazaar extension
+		const resourceServer = new x402ResourceServer(facilitatorClient)
+			.register(network, new ExactEvmScheme())
+			.registerExtension(bazaarResourceServerExtension);
 
 		// Create route configuration for x402 v2
 		const routeKey = `${method} ${routeTemplate}`;
@@ -237,46 +240,47 @@ export function createProtectedRoute(config: ProtectedRouteConfig) {
 			description: config.description,
 		};
 
-		// Add mimeType if specified
+		// Add mimeType if specified (defaults to application/json for Bazaar)
 		if (config.mimeType) {
 			routeConfig.mimeType = config.mimeType;
+		} else {
+			// Default to application/json for Bazaar discovery
+			routeConfig.mimeType = "application/json";
 		}
 
-		// Add Bazaar discovery extension if path params schema is specified
-		if (
-			config.pathParamsSchema ||
-			config.outputExample ||
-			config.serviceName ||
-			config.tags ||
-			config.iconUrl
-		) {
-			const extensionConfig: any = {};
+		// Always add Bazaar discovery extension for proper cataloging
+		const extensionConfig: any = {};
 
-			// Add path params schema
-			if (config.pathParamsSchema) {
-				extensionConfig.pathParamsSchema = config.pathParamsSchema;
-			}
+		// Add path params schema if specified
+		if (config.pathParamsSchema) {
+			extensionConfig.pathParamsSchema = config.pathParamsSchema;
+		}
 
-			// Add output example
-			if (config.outputExample) {
-				extensionConfig.output = { example: config.outputExample };
-			}
-
-			// Add service-level metadata
-			if (config.serviceName) {
-				extensionConfig.serviceName = config.serviceName;
-			}
-			if (config.tags && config.tags.length > 0) {
-				extensionConfig.tags = config.tags;
-			}
-			if (config.iconUrl) {
-				extensionConfig.iconUrl = config.iconUrl;
-			}
-
-			routeConfig.extensions = {
-				...declareDiscoveryExtension(extensionConfig),
+		// Add output example - use provided or create minimal example
+		if (config.outputExample) {
+			extensionConfig.output = { example: config.outputExample };
+		} else {
+			// Provide minimal output example for Bazaar discovery
+			extensionConfig.output = {
+				example: { message: "Success", data: {} },
 			};
 		}
+
+		// Add service-level metadata
+		if (config.serviceName) {
+			extensionConfig.serviceName = config.serviceName;
+		}
+		if (config.tags && config.tags.length > 0) {
+			extensionConfig.tags = config.tags;
+		}
+		if (config.iconUrl) {
+			extensionConfig.iconUrl = config.iconUrl;
+		}
+
+		// Use declareDiscoveryExtension to auto-generate proper Bazaar metadata
+		routeConfig.extensions = {
+			...declareDiscoveryExtension(extensionConfig),
+		};
 
 		const routes = {
 			[routeKey]: routeConfig,

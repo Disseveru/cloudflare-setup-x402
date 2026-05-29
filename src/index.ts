@@ -17,6 +17,12 @@ const BUILTIN_PROTECTED_PATHS: ProtectedRouteConfig[] = [
 		pattern: "/__x402/protected",
 		price: "$0.01",
 		description: "Access to test protected endpoint",
+		mimeType: "application/json",
+		outputExample: {
+			message: "Premium content accessed!",
+			timestamp: 0,
+			note: "This endpoint always requires payment or valid authentication cookie",
+		},
 	},
 ];
 
