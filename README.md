@@ -644,11 +644,59 @@ Simply add a new entry to `PROTECTED_PATTERNS` in `wrangler.jsonc`:
 - Run `npm run cf-typegen` to regenerate types after changing `wrangler.jsonc`
 - Check `tsconfig.json` includes correct files
 
+## CDP Wallet Integration
+
+This worker includes CDP SDK integration for programmatic wallet operations. You can send funds, check wallet status, and manage transactions directly from the worker.
+
+### Available Wallet Endpoints
+
+- **GET `/api/wallet/info`** - Check CDP SDK configuration status
+- **POST `/api/wallet/send`** - Send funds from your CDP wallet
+
+### Setup Instructions
+
+1. **Configure CDP Secrets:**
+   ```bash
+   npx wrangler secret put CDP_API_KEY
+   npx wrangler secret put CDP_PRIVATE_KEY
+   npx wrangler secret put CDP_WALLET_SECRET
+   ```
+
+2. **Verify Configuration:**
+   ```bash
+   curl https://your-worker.workers.dev/api/wallet/info
+   ```
+
+3. **Send a Payment:**
+   ```bash
+   curl -X POST https://your-worker.workers.dev/api/wallet/send \
+     -H "Content-Type: application/json" \
+     -d '{
+       "to": "0xRecipientAddress",
+       "amount": "0.01",
+       "asset": "usdc",
+       "network": "base"
+     }'
+   ```
+
+### Documentation
+
+- [CDP Wallet Setup Guide](./CDP_WALLET_SETUP.md) - Initial setup and configuration
+- [Payment Verification Guide](./PAYMENT_VERIFICATION_GUIDE.md) - Complete guide for verifying and settling payments
+- [Verification Script](./VERIFY_SETTLE_PAYMENT.md) - Automated verification and settlement
+
+### Use Cases
+
+- **Agentic.Market Validation** - Send validation payments for project registration
+- **Service-to-Service Payments** - Automated payments between services
+- **Wallet Management** - Check balances and transaction history
+
 ## Resources
 
 - [x402 Protocol Documentation](https://x402.gitbook.io/x402)
 - [x402 GitHub](https://github.com/coinbase/x402) - Open source repository
 - [CDP Server Wallet Quickstart](https://docs.cdp.coinbase.com/server-wallets/v2/introduction/quickstart) - Create wallets programmatically
+- [CDP SDK Documentation](https://coinbase.github.io/cdp-sdk/typescript) - TypeScript SDK reference
 - [Cloudflare Workers Documentation](https://developers.cloudflare.com/workers/)
 - [Service Bindings](https://developers.cloudflare.com/workers/runtime-apis/bindings/service-bindings/) - Worker-to-Worker communication
 - [Base Sepolia Testnet](https://docs.base.org/network-information/#base-testnet-sepolia)
