@@ -52,6 +52,36 @@ jobs:
         env:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
 
+      - name: Upload CDP_API_KEY (production)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: secret put CDP_API_KEY
+        env:
+          CDP_API_KEY: ${{ secrets.CDP_API_KEY }}
+
+      - name: Upload CDP_PRIVATE_KEY (production)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: secret put CDP_PRIVATE_KEY
+        env:
+          CDP_PRIVATE_KEY: ${{ secrets.CDP_PRIVATE_KEY }}
+
+      - name: Upload CDP_WALLET_SECRET (production)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: secret put CDP_WALLET_SECRET
+        env:
+          CDP_WALLET_SECRET: ${{ secrets.CDP_WALLET_SECRET }}
+
       - name: Deploy Worker (preview / PR)
         if: github.event_name == 'pull_request'
         uses: cloudflare/wrangler-action@v3
@@ -69,3 +99,33 @@ jobs:
           command: secret put JWT_SECRET
         env:
           JWT_SECRET: ${{ secrets.JWT_SECRET || 'preview-secret-not-configured-for-testing-only-do-not-use-in-production' }}
+
+      - name: Upload CDP_API_KEY (preview / PR)
+        if: github.event_name == 'pull_request'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: secret put CDP_API_KEY
+        env:
+          CDP_API_KEY: ${{ secrets.CDP_API_KEY }}
+
+      - name: Upload CDP_PRIVATE_KEY (preview / PR)
+        if: github.event_name == 'pull_request'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: secret put CDP_PRIVATE_KEY
+        env:
+          CDP_PRIVATE_KEY: ${{ secrets.CDP_PRIVATE_KEY }}
+
+      - name: Upload CDP_WALLET_SECRET (preview / PR)
+        if: github.event_name == 'pull_request'
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: secret put CDP_WALLET_SECRET
+        env:
+          CDP_WALLET_SECRET: ${{ secrets.CDP_WALLET_SECRET }}
