@@ -20,7 +20,7 @@ The x402 Worker now includes CDP SDK integration, enabling:
 
 ### 1. Set CDP Secrets
 
-You need to configure two secrets in your Cloudflare Worker:
+You need to configure three secrets in your Cloudflare Worker:
 
 ```bash
 # Set your CDP API Key ID
@@ -30,7 +30,13 @@ wrangler secret put CDP_API_KEY
 # Set your CDP Private Key
 wrangler secret put CDP_PRIVATE_KEY
 # Enter your CDP API Key Secret when prompted
+
+# Set your CDP Wallet Secret (for accessing your funded wallet)
+wrangler secret put CDP_WALLET_SECRET
+# Enter your CDP Wallet Secret when prompted
 ```
+
+**Important:** The CDP_WALLET_SECRET is the wallet secret you created in the CDP portal. This allows the worker to access your existing funded wallet at address `0x451ab8d06B6EF38416312Fe4261B1A56dD2EAF1d`.
 
 ### 2. Deploy the Worker
 

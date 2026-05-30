@@ -271,6 +271,16 @@ app.post("/api/wallet/send", async (c) => {
 			);
 		}
 
+		if (!c.env.CDP_WALLET_SECRET) {
+			return c.json(
+				{
+					error:
+						"CDP_WALLET_SECRET not configured. This is required to use the funded wallet.",
+				},
+				500
+			);
+		}
+
 		const body = await c.req.json();
 		const { to, amount, asset = "usdc", network = "base-sepolia" } = body;
 
@@ -286,23 +296,47 @@ app.post("/api/wallet/send", async (c) => {
 		// Dynamic import for CDP SDK (only loads when needed)
 		const { CdpClient } = await import("@coinbase/cdp-sdk");
 
-		// Initialize CDP Client
+		// Initialize CDP Client with wallet secret
 		const cdp = new CdpClient({
 			apiKeyId: c.env.CDP_API_KEY,
 			apiKeySecret: c.env.CDP_PRIVATE_KEY,
+			walletSecret: c.env.CDP_WALLET_SECRET,
 		});
 
 		// Map network to CDP network ID
 		const networkId = network === "base" ? "base-mainnet" : "base-sepolia";
 
-		// Create or get EVM account
-		// Note: In production, you'd want to persist and reuse accounts
-		// For now, we'll create a new account each time or use a default one
+		// Import the existing funded wallet using the wallet secret
+		// The CDP SDK will use the wallet secret to derive/import the account
+		// The expected wallet address is 0x451ab8d06B6EF38416312Fe4261B1A56dD2EAF1d
 		try {
-			// Create a server account
-			const account = await cdp.evm.createAccount({
-				name: "agentic-market-sender",
-			});
+			// List existing accounts to find our funded wallet
+			const accounts = await cdp.evm.listAccounts();
+
+			// Use the first account (should be our funded wallet)
+			// In production, you might want to filter by address to ensure it's the correct one
+			if (!accounts || accounts.length === 0) {
+				return c.json(
+					{
+						error: "No accounts found",
+						details:
+							"The CDP wallet secret did not return any accounts. Please check your configuration.",
+					},
+					500
+				);
+			}
+
+			const account = accounts[0];
+
+			// Verify this is the expected wallet address
+			const expectedAddress = "0x451ab8d06B6EF38416312Fe4261B1A56dD2EAF1d";
+			if (
+				account.address.toLowerCase() !== expectedAddress.toLowerCase()
+			) {
+				console.warn(
+					`Warning: Using account ${account.address} instead of expected ${expectedAddress}`
+				);
+			}
 
 			// Get the network-scoped account
 			const networkAccount = await account.useNetwork(networkId);
@@ -392,24 +426,47 @@ app.get("/api/wallet/info", async (c) => {
 
 		const { CdpClient } = await import("@coinbase/cdp-sdk");
 
-		const _cdp = new CdpClient({
+		const cdp = new CdpClient({
 			apiKeyId: c.env.CDP_API_KEY,
 			apiKeySecret: c.env.CDP_PRIVATE_KEY,
+			walletSecret: c.env.CDP_WALLET_SECRET,
 		});
+
+		// Try to list accounts if wallet secret is configured
+		let walletAddress = null;
+		if (c.env.CDP_WALLET_SECRET) {
+			try {
+				const accounts = await cdp.evm.listAccounts();
+				if (accounts && accounts.length > 0) {
+					walletAddress = accounts[0].address;
+				}
+			} catch (error) {
+				console.warn("Failed to list accounts:", error);
+			}
+		}
 
 		return c.json({
 			configured: true,
 			message: "CDP SDK is properly configured",
+			walletConfigured: !!c.env.CDP_WALLET_SECRET,
+			walletAddress: walletAddress,
+			expectedWalletAddress: "0x451ab8d06B6EF38416312Fe4261B1A56dD2EAF1d",
 			capabilities: [
 				"Create EVM and Solana accounts",
 				"Send transactions on Base, Base Sepolia, and other networks",
 				"Manage end users and delegated signing",
 				"EIP-7702 delegation support",
 			],
-			nextSteps: [
-				"Create an account: POST /api/wallet/account/create",
-				"Send funds: POST /api/wallet/send (after account creation)",
-			],
+			nextSteps: walletAddress
+				? [
+						"Send validation payment: POST /api/wallet/send",
+						"Check wallet balance at https://basescan.org/address/" +
+							walletAddress,
+					]
+				: [
+						"Configure CDP_WALLET_SECRET to use existing funded wallet",
+						"Send funds: POST /api/wallet/send (after wallet configuration)",
+					],
 		});
 	} catch (error: any) {
 		console.error("Wallet info error:", error);

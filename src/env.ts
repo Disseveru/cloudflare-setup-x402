@@ -23,6 +23,8 @@ export interface Env extends CloudflareBindings {
 	CDP_API_KEY?: string;
 	/** Optional: CDP Private Key for wallet operations (JSON string) */
 	CDP_PRIVATE_KEY?: string;
+	/** Optional: CDP Wallet Secret for importing funded wallet */
+	CDP_WALLET_SECRET?: string;
 }
 
 /** Full app context type for Hono */
