@@ -5,6 +5,7 @@ This guide explains how to set up and use the CDP (Coinbase Developer Platform) 
 ## Overview
 
 The x402 Worker now includes CDP SDK integration, enabling:
+
 - Send funds from CDP-managed wallets
 - Check wallet configuration and status
 - Support for Base mainnet and Base Sepolia testnet
@@ -44,25 +45,27 @@ npm run deploy
 Check CDP SDK configuration status.
 
 **Request:**
+
 ```bash
 curl https://your-worker.workers.dev/api/wallet/info
 ```
 
 **Response:**
+
 ```json
 {
-  "configured": true,
-  "message": "CDP SDK is properly configured",
-  "capabilities": [
-    "Create EVM and Solana accounts",
-    "Send transactions on Base, Base Sepolia, and other networks",
-    "Manage end users and delegated signing",
-    "EIP-7702 delegation support"
-  ],
-  "nextSteps": [
-    "Create an account: POST /api/wallet/account/create",
-    "Send funds: POST /api/wallet/send (after account creation)"
-  ]
+	"configured": true,
+	"message": "CDP SDK is properly configured",
+	"capabilities": [
+		"Create EVM and Solana accounts",
+		"Send transactions on Base, Base Sepolia, and other networks",
+		"Manage end users and delegated signing",
+		"EIP-7702 delegation support"
+	],
+	"nextSteps": [
+		"Create an account: POST /api/wallet/account/create",
+		"Send funds: POST /api/wallet/send (after account creation)"
+	]
 }
 ```
 
@@ -71,6 +74,7 @@ curl https://your-worker.workers.dev/api/wallet/info
 Send funds from your CDP wallet (validation payments, agentic.market registration, etc.)
 
 **Request:**
+
 ```bash
 curl -X POST https://your-worker.workers.dev/api/wallet/send \
   -H "Content-Type: application/json" \
@@ -83,28 +87,30 @@ curl -X POST https://your-worker.workers.dev/api/wallet/send \
 ```
 
 **Parameters:**
+
 - `to` (required): Destination wallet address (0x...)
 - `amount` (required): Amount to send (e.g., "0.01")
 - `asset` (optional): "usdc" or "eth" (default: "usdc")
 - `network` (optional): "base" or "base-sepolia" (default: "base-sepolia")
 
 **Response:**
+
 ```json
 {
-  "success": true,
-  "message": "CDP SDK integrated successfully",
-  "note": "To complete wallet operations, you need to create an EVM account and fund it.",
-  "instructions": {
-    "createAccount": "Use cdp.createEvmAccount() to create a new account",
-    "fundAccount": "Fund the account with testnet/mainnet tokens",
-    "sendTransaction": "Use account.sendEvmAsset() to send funds"
-  },
-  "requestedTransfer": {
-    "to": "0xRecipientAddress",
-    "amount": "0.01",
-    "asset": "usdc",
-    "network": "base-sepolia"
-  }
+	"success": true,
+	"message": "CDP SDK integrated successfully",
+	"note": "To complete wallet operations, you need to create an EVM account and fund it.",
+	"instructions": {
+		"createAccount": "Use cdp.createEvmAccount() to create a new account",
+		"fundAccount": "Fund the account with testnet/mainnet tokens",
+		"sendTransaction": "Use account.sendEvmAsset() to send funds"
+	},
+	"requestedTransfer": {
+		"to": "0xRecipientAddress",
+		"amount": "0.01",
+		"asset": "usdc",
+		"network": "base-sepolia"
+	}
 }
 ```
 
@@ -132,6 +138,7 @@ The current implementation provides the foundation for wallet operations. To ful
 3. **Implement Transaction Logic**: Complete the send endpoint to actually execute transactions
 
 For more details, see:
+
 - [CDP SDK Documentation](https://coinbase.github.io/cdp-sdk/typescript)
 - [CDP Wallet API v2](https://docs.cdp.coinbase.com/wallet-api-v2/docs/welcome)
 - [CDP API Reference](https://docs.cdp.coinbase.com/api-v2/docs/welcome)
@@ -149,6 +156,7 @@ For more details, see:
 ### "CDP credentials not configured"
 
 You need to set the CDP_API_KEY and CDP_PRIVATE_KEY secrets:
+
 ```bash
 wrangler secret put CDP_API_KEY
 wrangler secret put CDP_PRIVATE_KEY

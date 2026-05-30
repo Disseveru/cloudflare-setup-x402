@@ -287,35 +287,86 @@ app.post("/api/wallet/send", async (c) => {
 		const { CdpClient } = await import("@coinbase/cdp-sdk");
 
 		// Initialize CDP Client
-		const _cdp = new CdpClient({
+		const cdp = new CdpClient({
 			apiKeyId: c.env.CDP_API_KEY,
 			apiKeySecret: c.env.CDP_PRIVATE_KEY,
 		});
 
-		// For now, return a success response with instructions
-		// The CDP SDK for server-side wallet operations requires more setup
-		return c.json({
-			success: true,
-			message: "CDP SDK integrated successfully",
-			note: "To complete wallet operations, you need to create an EVM account and fund it.",
-			instructions: {
-				createAccount: "Use cdp.createEvmAccount() to create a new account",
-				fundAccount: "Fund the account with testnet/mainnet tokens",
-				sendTransaction: "Use account.sendEvmAsset() to send funds",
-			},
-			requestedTransfer: {
+		// Map network to CDP network ID
+		const networkId = network === "base" ? "base-mainnet" : "base-sepolia";
+
+		// Create or get EVM account
+		// Note: In production, you'd want to persist and reuse accounts
+		// For now, we'll create a new account each time or use a default one
+		try {
+			// Create a server account
+			const account = await cdp.evm.createAccount({
+				name: "agentic-market-sender",
+			});
+
+			// Get the network-scoped account
+			const networkAccount = await account.useNetwork(networkId);
+
+			// Convert amount to bigint (assuming amount is in base units, e.g., "0.01" = 10000 for USDC with 6 decimals)
+			// For USDC: 6 decimals, for ETH: 18 decimals
+			const decimals = asset === "usdc" ? 6 : 18;
+			const amountBigInt = BigInt(
+				Math.floor(parseFloat(amount) * 10 ** decimals)
+			);
+
+			// Send the transfer
+			const result = await networkAccount.transfer({
 				to,
+				amount: amountBigInt,
+				token: asset,
+			});
+
+			// Build transaction link based on network
+			const explorerUrl =
+				networkId === "base-mainnet"
+					? "https://basescan.org"
+					: "https://sepolia.basescan.org";
+			const transactionLink = `${explorerUrl}/tx/${result.transactionHash}`;
+
+			return c.json({
+				success: true,
+				transactionHash: result.transactionHash,
+				transactionLink,
+				network: networkId,
 				amount,
 				asset,
-				network,
-			},
-		});
+				to,
+				from: account.address,
+			});
+		} catch (error: any) {
+			// If account creation or sending fails, provide helpful error
+			console.error("CDP transaction error:", error);
+
+			// Check if it's a balance error
+			if (
+				error.message?.includes("insufficient") ||
+				error.message?.includes("balance")
+			) {
+				return c.json(
+					{
+						error: "Insufficient funds",
+						details:
+							"The CDP account needs to be funded. Visit https://portal.cdp.coinbase.com to fund your account.",
+						originalError: error.message,
+					},
+					400
+				);
+			}
+
+			throw error; // Re-throw to be caught by outer catch
+		}
 	} catch (error: any) {
 		console.error("Wallet send error:", error);
 		return c.json(
 			{
 				error: "Failed to process wallet request",
 				details: error.message,
+				note: "Check that your CDP credentials are correct and that you have an account with sufficient funds.",
 			},
 			500
 		);
