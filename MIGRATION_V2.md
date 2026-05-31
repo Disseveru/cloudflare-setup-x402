@@ -2,6 +2,32 @@
 
 This repository is **fully compliant with x402 v2** specification and includes support for dynamic routes with Bazaar discovery.
 
+## x402 v2 HTTP Transport Compliance
+
+As of @x402/core v2.14.0, this repository is fully compliant with the x402 HTTP transport v2 spec:
+
+✅ **PAYMENT-REQUIRED Header**: PaymentRequired payload is delivered via a base64-encoded `PAYMENT-REQUIRED` response header (not in the response body)
+✅ **402 Status Code**: Returns HTTP 402 Payment Required status
+✅ **Dynamic Routes**: Supports parameterized routes with `:param` syntax
+✅ **Bazaar Discovery**: Includes metadata for automatic service discovery
+
+**Required Package Versions:**
+
+- `@x402/core: ^2.14.0`
+- `@x402/hono: ^2.14.0`
+- `@x402/evm: ^2.14.0`
+- `@x402/extensions: ^2.14.0`
+
+The v2 HTTP transport delivers the PaymentRequired response using the standard header format:
+
+```http
+HTTP/1.1 402 Payment Required
+PAYMENT-REQUIRED: eyJ4NDAyVmVyc2lvbiI6MiwiYWNjZXB0cyI6W3sic2NoZW1lIjoiZX...
+Content-Type: application/json
+```
+
+This ensures compatibility with x402 clients and Bazaar discovery services that expect the v2 header format.
+
 ## What's New in x402 v2
 
 ### 1. Dynamic Routes with Path Parameters
@@ -32,10 +58,10 @@ Wildcards (`/*`) are automatically converted to named parameters (`:var1`) for c
 
 ✅ **Fully Migrated** - This repository uses:
 
-- `@x402/hono: ^2.13.0`
-- `@x402/core: ^2.13.0`
-- `@x402/evm: ^2.13.0`
-- `@x402/extensions: ^2.13.0`
+- `@x402/hono: ^2.14.0`
+- `@x402/core: ^2.14.0`
+- `@x402/evm: ^2.14.0`
+- `@x402/extensions: ^2.14.0`
 
 ## Using Dynamic Routes
 
