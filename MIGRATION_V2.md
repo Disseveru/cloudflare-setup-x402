@@ -12,6 +12,7 @@ As of @x402/core v2.14.0, this repository is fully compliant with the x402 HTTP 
 ✅ **Bazaar Discovery**: Includes metadata for automatic service discovery
 
 **Required Package Versions:**
+
 - `@x402/core: ^2.14.0`
 - `@x402/hono: ^2.14.0`
 - `@x402/evm: ^2.14.0`
