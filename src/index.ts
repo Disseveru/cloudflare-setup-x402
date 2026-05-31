@@ -373,21 +373,23 @@ app.post("/api/wallet/send", async (c) => {
 				to,
 				from: account.address,
 			});
-		} catch (error: any) {
+		} catch (error: unknown) {
 			// If account creation or sending fails, provide helpful error
 			console.error("CDP transaction error:", error);
 
 			// Check if it's a balance error
+			const errorMessage =
+				error instanceof Error ? error.message : String(error);
 			if (
-				error.message?.includes("insufficient") ||
-				error.message?.includes("balance")
+				errorMessage.includes("insufficient") ||
+				errorMessage.includes("balance")
 			) {
 				return c.json(
 					{
 						error: "Insufficient funds",
 						details:
 							"The CDP account needs to be funded. Visit https://portal.cdp.coinbase.com to fund your account.",
-						originalError: error.message,
+						originalError: errorMessage,
 					},
 					400
 				);
@@ -395,12 +397,13 @@ app.post("/api/wallet/send", async (c) => {
 
 			throw error; // Re-throw to be caught by outer catch
 		}
-	} catch (error: any) {
+	} catch (error: unknown) {
 		console.error("Wallet send error:", error);
+		const errorMessage = error instanceof Error ? error.message : String(error);
 		return c.json(
 			{
 				error: "Failed to process wallet request",
-				details: error.message,
+				details: errorMessage,
 				note: "Check that your CDP credentials are correct and that you have an account with sufficient funds.",
 			},
 			500
@@ -473,12 +476,13 @@ app.get("/api/wallet/info", async (c) => {
 						"Send funds: POST /api/wallet/send (after wallet configuration)",
 					],
 		});
-	} catch (error: any) {
+	} catch (error: unknown) {
 		console.error("Wallet info error:", error);
+		const errorMessage = error instanceof Error ? error.message : String(error);
 		return c.json(
 			{
 				error: "Failed to initialize CDP client",
-				details: error.message,
+				details: errorMessage,
 			},
 			500
 		);
