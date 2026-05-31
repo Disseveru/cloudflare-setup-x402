@@ -1,4 +1,3 @@
-import "./tools";
 import { Hono } from "hono";
 import { setCookie } from "hono/cookie";
 import {
@@ -311,11 +310,15 @@ app.post("/api/wallet/send", async (c) => {
 		// The expected wallet address is 0x451ab8d06B6EF38416312Fe4261B1A56dD2EAF1d
 		try {
 			// List existing accounts to find our funded wallet
-			const accounts = await cdp.evm.listAccounts();
+			const accountsResult = await cdp.evm.listAccounts();
 
 			// Use the first account (should be our funded wallet)
 			// In production, you might want to filter by address to ensure it's the correct one
-			if (!accounts || accounts.length === 0) {
+			if (
+				!accountsResult ||
+				!accountsResult.accounts ||
+				accountsResult.accounts.length === 0
+			) {
 				return c.json(
 					{
 						error: "No accounts found",
@@ -326,13 +329,11 @@ app.post("/api/wallet/send", async (c) => {
 				);
 			}
 
-			const account = accounts[0];
+			const account = accountsResult.accounts[0];
 
 			// Verify this is the expected wallet address
 			const expectedAddress = "0x451ab8d06B6EF38416312Fe4261B1A56dD2EAF1d";
-			if (
-				account.address.toLowerCase() !== expectedAddress.toLowerCase()
-			) {
+			if (account.address.toLowerCase() !== expectedAddress.toLowerCase()) {
 				console.warn(
 					`Warning: Using account ${account.address} instead of expected ${expectedAddress}`
 				);
@@ -436,9 +437,13 @@ app.get("/api/wallet/info", async (c) => {
 		let walletAddress = null;
 		if (c.env.CDP_WALLET_SECRET) {
 			try {
-				const accounts = await cdp.evm.listAccounts();
-				if (accounts && accounts.length > 0) {
-					walletAddress = accounts[0].address;
+				const accountsResult = await cdp.evm.listAccounts();
+				if (
+					accountsResult &&
+					accountsResult.accounts &&
+					accountsResult.accounts.length > 0
+				) {
+					walletAddress = accountsResult.accounts[0].address;
 				}
 			} catch (error) {
 				console.warn("Failed to list accounts:", error);
