@@ -641,3 +641,57 @@ Before running `npm run deploy`, verify:
 - [Wrangler Commands](https://developers.cloudflare.com/workers/wrangler/commands/) - CLI reference for discovery
 - [x402 Protocol](https://x402.org) - Payment protocol specification
 - [Bot Management](https://developers.cloudflare.com/bots/) - Cloudflare Bot Management documentation
+
+---
+
+## Cursor Cloud specific instructions
+
+This repo is a **single Cloudflare Worker** (no Docker Compose). Standard commands live in `package.json` (`dev`, `lint`, `test`, `deploy`).
+
+### First-time secrets (not in the VM update script)
+
+1. `cp .dev.vars.example .dev.vars`
+2. **Replace** the placeholder `JWT_SECRET=your-secret-key-here` with a 64-character hex secret (do not append a second `JWT_SECRET=` line — Wrangler uses the first match).
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+### Run the dev server
+
+- `npm run dev` → `http://localhost:8787` (Wrangler local worker).
+- Keep it in a **tmux** session for long-running dev; reattach with `tmux -f /exec-daemon/tmux.portal.conf attach-session -t x402-wrangler-dev`.
+
+### Verify locally (no Cloudflare account required)
+
+| Check | Command | Expected |
+| ----- | ------- | -------- |
+| Lint | `npm run lint` | exit 0 |
+| Unit tests | `npm test` | 15 tests pass |
+| Health | `curl http://localhost:8787/__x402/health` | `200`, `"status":"ok"` |
+| Config | `curl http://localhost:8787/__x402/config` | `200`, JSON config |
+| Auth cookie path | Valid `auth_token` cookie on `/__x402/protected` | `200` + premium JSON |
+
+`wrangler.jsonc` defaults to `"NETWORK": "base"` and CDP `FACILITATOR_URL`. For local runs aligned with README testnet guidance:
+
+```bash
+npx wrangler dev --var NETWORK:base-sepolia
+```
+
+### Payment / 402 behavior locally
+
+`GET /__x402/protected` **without** a cookie should return **402** per README, but may return **500** with `Facilitator does not support exact on eip155:...` because `createProtectedRoute` in `src/auth.ts` passes `syncFacilitatorOnStart: false` to `paymentMiddleware` (facilitator kinds are not fetched). To exercise the **JWT session path** without on-chain payment, mint a cookie with the same secret as `.dev.vars` (see `src/jwt.ts` / `generateJWT`) and call `/__x402/protected` with `auth_token=...`.
+
+Full payment E2E (402 → pay → content → cookie reuse) needs a funded test wallet:
+
+```bash
+PRIVATE_KEY=0x... npm run test:client   # with npm run dev running
+```
+
+See `TESTING.md` for Base Sepolia USDC and faucet links.
+
+### Optional services (out of scope for minimal dev)
+
+- **Origin** (`ORIGIN_URL` / `ORIGIN_SERVICE` / DNS): only needed to proxy non-`/__x402/*` routes after auth.
+- **Deploy / routes**: `npx wrangler login`, `npm run deploy`, `wrangler secret put JWT_SECRET`.
+- **Bot Management**: edge-only; not available in `wrangler dev`.
