@@ -127,15 +127,15 @@ npm install
 
 The proxy is configured via environment variables in `wrangler.jsonc`:
 
-| Variable             | Required | Description                                    | Example                                                       |
-| -------------------- | -------- | ---------------------------------------------- | ------------------------------------------------------------- |
-| `PAY_TO`             | Yes      | Wallet address to receive payments             | `"0x..."`                                                     |
-| `NETWORK`            | Yes      | Blockchain network for payments                | `"base-sepolia"` or `"base"`                                  |
-| `JWT_SECRET`         | Yes      | Secret for signing auth tokens (set as secret) | (64 hex chars)                                                |
-| `PROTECTED_PATTERNS` | Yes      | Array of route pricing configurations          | See below                                                     |
-| `ORIGIN_URL`         | No       | External URL to proxy to (if not using DNS)    | `"https://api.example.com"`                                   |
-| `ORIGIN_SERVICE`     | No       | Service Binding to origin Worker               | Configured in wrangler.jsonc                                  |
-| `FACILITATOR_URL`    | No       | x402 facilitator endpoint (defaults to CDP)    | `"https://api.cdp.coinbase.com/platform/v2/x402/facilitator"` |
+| Variable             | Required | Description                                    | Example                          |
+| -------------------- | -------- | ---------------------------------------------- | -------------------------------- |
+| `PAY_TO`             | Yes      | Wallet address to receive payments             | `"0x..."`                        |
+| `NETWORK`            | Yes      | Blockchain network for payments                | `"base-sepolia"` or `"base"`     |
+| `JWT_SECRET`         | Yes      | Secret for signing auth tokens (set as secret) | (64 hex chars)                   |
+| `PROTECTED_PATTERNS` | Yes      | Array of route pricing configurations          | See below                        |
+| `ORIGIN_URL`         | No       | External URL to proxy to (if not using DNS)    | `"https://api.example.com"`      |
+| `ORIGIN_SERVICE`     | No       | Service Binding to origin Worker               | Configured in wrangler.jsonc     |
+| `FACILITATOR_URL`    | No       | x402 facilitator endpoint (defaults to CDP)    | `"https://x402.org/facilitator"` |
 
 #### PROTECTED_PATTERNS
 

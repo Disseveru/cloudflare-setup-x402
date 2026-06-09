@@ -11,44 +11,7 @@ import type { AppContext, Env } from "./env";
 
 const app = new Hono<AppContext>();
 
-const ROOT_SERVICE_DISCOVERY = {
-	status: "ok",
-	service: "x402-proxy",
-	endpoints: {
-		health: "/__x402/health",
-		config: "/__x402/config",
-		protected: "/__x402/protected",
-		wallet: {
-			send: "/api/wallet/send",
-			info: "/api/wallet/info",
-		},
-	},
-};
-
 const BUILTIN_PROTECTED_PATHS: ProtectedRouteConfig[] = [
-	{
-		pattern: "/",
-		price: "$0.001",
-		description: "Access to x402 proxy service discovery",
-		mimeType: "application/json",
-		inputExample: {},
-		inputSchema: {
-			properties: {},
-			additionalProperties: false,
-		},
-		outputExample: ROOT_SERVICE_DISCOVERY,
-		outputSchema: {
-			type: "object",
-			properties: {
-				status: { type: "string" },
-				service: { type: "string" },
-				endpoints: { type: "object" },
-			},
-			required: ["status", "service", "endpoints"],
-		},
-		serviceName: "x402 Proxy",
-		tags: ["x402", "proxy", "discovery"],
-	},
 	{
 		pattern: "/__x402/protected",
 		price: "$0.01",
@@ -59,6 +22,7 @@ const BUILTIN_PROTECTED_PATHS: ProtectedRouteConfig[] = [
 const BUILTIN_PUBLIC_PATHS = [
 	"/__x402/health",
 	"/__x402/config",
+	"/",
 	"/api/wallet/send",
 	"/api/wallet/info",
 ];
@@ -130,6 +94,23 @@ function findProtectedRouteConfig(
 	);
 }
 
+// ROOT ROUTE — prevents proxy loop on workers.dev
+app.get("/", (c) => {
+	return c.json({
+		status: "ok",
+		service: "x402-proxy",
+		endpoints: {
+			health: "/__x402/health",
+			config: "/__x402/config",
+			protected: "/__x402/protected",
+			wallet: {
+				send: "/api/wallet/send",
+				info: "/api/wallet/info",
+			},
+		},
+	});
+});
+
 app.use("*", async (c, next) => {
 	const path = c.req.path;
 	const protectedPatterns = c.env.PROTECTED_PATTERNS || [];
@@ -175,7 +156,7 @@ app.use("*", async (c, next) => {
 			return c.res;
 		}
 
-		if (path === "/__x402/protected" || path === "/") {
+		if (path === "/__x402/protected") {
 			if (jwtToken) {
 				setCookie(c, "auth_token", jwtToken, {
 					httpOnly: true,
@@ -216,10 +197,6 @@ app.use("*", async (c, next) => {
 	}
 
 	return proxyToOrigin(c.req.raw, c.env);
-});
-
-app.get("/", (c) => {
-	return c.json(ROOT_SERVICE_DISCOVERY);
 });
 
 app.get("/__x402/health", (c) => {
