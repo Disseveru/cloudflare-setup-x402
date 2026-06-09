@@ -6,10 +6,39 @@ import { Context, Next, MiddlewareHandler } from "hono";
 import { getCookie } from "hono/cookie";
 import { verifyJWT } from "./jwt";
 import { paymentMiddleware, x402ResourceServer } from "@x402/hono";
-import { HTTPFacilitatorClient } from "@x402/core/server";
+import { HTTPFacilitatorClient, type RouteConfig } from "@x402/core/server";
 import { ExactEvmScheme } from "@x402/evm/exact/server";
-import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
+import {
+	bazaarResourceServerExtension,
+	declareDiscoveryExtension,
+	type DeclareDiscoveryExtensionInput,
+} from "@x402/extensions/bazaar";
+import type { SupportedResponse } from "@x402/core/types";
 import type { AppContext } from "./env";
+
+export const CDP_FACILITATOR_URL =
+	"https://api.cdp.coinbase.com/platform/v2/x402/facilitator";
+
+const CDP_SUPPORTED_EXACT_EVM_NETWORKS = [
+	"eip155:8453",
+	"eip155:84532",
+	"eip155:137",
+	"eip155:42161",
+] as const;
+
+class CdpFacilitatorClient extends HTTPFacilitatorClient {
+	async getSupported(): Promise<SupportedResponse> {
+		return {
+			kinds: CDP_SUPPORTED_EXACT_EVM_NETWORKS.map((network) => ({
+				x402Version: 2,
+				scheme: "exact",
+				network,
+			})),
+			extensions: ["bazaar"],
+			signers: {},
+		};
+	}
+}
 
 /**
  * Creates a combined middleware that checks for valid cookie authentication
@@ -72,6 +101,10 @@ export interface ProtectedRouteConfig {
 	// ===== x402 v2 Bazaar Discovery Extension (optional) =====
 	/** MIME type of the response (e.g., "application/json") */
 	mimeType?: string;
+	/** Example query parameters/body for Bazaar probes */
+	inputExample?: Record<string, unknown>;
+	/** JSON Schema for query parameters/body */
+	inputSchema?: Record<string, unknown>;
 	/** JSON Schema for path parameters (e.g., { properties: { id: { type: "string" } }, required: ["id"] }) */
 	pathParamsSchema?: {
 		properties: Record<string, { type: string; description?: string }>;
@@ -79,6 +112,8 @@ export interface ProtectedRouteConfig {
 	};
 	/** Example output for API documentation */
 	outputExample?: unknown;
+	/** JSON Schema for the output example */
+	outputSchema?: Record<string, unknown>;
 
 	// ===== Service-level metadata for Bazaar catalog (optional) =====
 	/** Human-readable service name (≤ 32 chars) */
@@ -94,38 +129,6 @@ export interface ProtectedRouteConfig {
  */
 export interface PathParams {
 	[key: string]: string;
-}
-
-/**
- * x402 v2 Bazaar extension configuration
- */
-interface BazaarExtensionConfig {
-	pathParamsSchema?: {
-		properties: Record<string, { type: string; description?: string }>;
-		required?: string[];
-	};
-	output?: { example: unknown };
-	serviceName?: string;
-	tags?: string[];
-	iconUrl?: string;
-}
-
-/**
- * x402 v2 route configuration
- */
-interface X402RouteConfig {
-	accepts: {
-		scheme: "exact";
-		price: string;
-		network: `${string}:${string}`;
-		payTo: `0x${string}`;
-		maxTimeoutSeconds: number;
-	};
-	description: string;
-	mimeType?: string;
-	extensions?: {
-		"bazaar.coinbase.com"?: BazaarExtensionConfig;
-	};
 }
 
 /**
@@ -148,6 +151,91 @@ export function patternToRouteTemplate(pattern: string): string {
 	}
 
 	return pattern;
+}
+
+export function normalizeNetwork(network: string): `${string}:${string}` {
+	const networkMap: Record<string, `${string}:${string}`> = {
+		base: "eip155:8453",
+		"base-sepolia": "eip155:84532",
+		polygon: "eip155:137",
+		arbitrum: "eip155:42161",
+	};
+
+	return (networkMap[network] || network) as `${string}:${string}`;
+}
+
+function hasBazaarDiscoveryMetadata(config: ProtectedRouteConfig): boolean {
+	return (
+		config.inputExample !== undefined ||
+		config.inputSchema !== undefined ||
+		config.pathParamsSchema !== undefined ||
+		config.outputExample !== undefined ||
+		config.outputSchema !== undefined
+	);
+}
+
+function buildBazaarDiscoveryConfig(
+	config: ProtectedRouteConfig
+): DeclareDiscoveryExtensionInput {
+	const output =
+		config.outputExample !== undefined || config.outputSchema
+			? {
+					...(config.outputExample !== undefined
+						? { example: config.outputExample }
+						: {}),
+					...(config.outputSchema ? { schema: config.outputSchema } : {}),
+				}
+			: undefined;
+
+	return {
+		input: config.inputExample ?? {},
+		inputSchema: config.inputSchema ?? {
+			properties: {},
+			additionalProperties: false,
+		},
+		...(config.pathParamsSchema
+			? { pathParamsSchema: config.pathParamsSchema }
+			: {}),
+		...(output ? { output } : {}),
+	};
+}
+
+export function buildX402RouteConfig(
+	config: ProtectedRouteConfig,
+	env: Pick<CloudflareBindings, "NETWORK" | "PAY_TO">
+): RouteConfig {
+	const routeConfig: RouteConfig = {
+		accepts: {
+			scheme: "exact",
+			price: config.price,
+			network: normalizeNetwork(env.NETWORK),
+			payTo: env.PAY_TO,
+			maxTimeoutSeconds: 300,
+		},
+		description: config.description,
+	};
+
+	if (config.mimeType) {
+		routeConfig.mimeType = config.mimeType;
+	}
+
+	if (config.serviceName) {
+		routeConfig.serviceName = config.serviceName;
+	}
+	if (config.tags && config.tags.length > 0) {
+		routeConfig.tags = config.tags;
+	}
+	if (config.iconUrl) {
+		routeConfig.iconUrl = config.iconUrl;
+	}
+
+	if (hasBazaarDiscoveryMetadata(config)) {
+		routeConfig.extensions = declareDiscoveryExtension(
+			buildBazaarDiscoveryConfig(config)
+		);
+	}
+
+	return routeConfig;
 }
 
 /**
@@ -235,94 +323,34 @@ export function createProtectedRoute(config: ProtectedRouteConfig) {
 		// Convert pattern to route template (for catalog normalization)
 		const routeTemplate = patternToRouteTemplate(config.pattern);
 
-		// Convert network string to CAIP-2 format if needed
-		// base -> eip155:8453, base-sepolia -> eip155:84532
-		const networkMap: Record<string, `${string}:${string}`> = {
-			base: "eip155:8453",
-			"base-sepolia": "eip155:84532",
-		};
-		const network = (networkMap[c.env.NETWORK] ||
-			c.env.NETWORK) as `${string}:${string}`;
+		const network = normalizeNetwork(c.env.NETWORK);
 
 		// Create facilitator client
-		const facilitatorUrl =
-			c.env.FACILITATOR_URL || "https://facilitator.x402.org";
-		const facilitatorClient = new HTTPFacilitatorClient({
+		const facilitatorUrl = c.env.FACILITATOR_URL || CDP_FACILITATOR_URL;
+		const facilitatorClient = new CdpFacilitatorClient({
 			url: facilitatorUrl,
 		});
 
-		// Create resource server with EVM scheme
-		const resourceServer = new x402ResourceServer(facilitatorClient).register(
-			network,
-			new ExactEvmScheme()
-		);
+		// Create resource server with EVM scheme and Bazaar discovery enrichment.
+		const resourceServer = new x402ResourceServer(facilitatorClient)
+			.register(network, new ExactEvmScheme())
+			.registerExtension(bazaarResourceServerExtension);
 
 		// Create route configuration for x402 v2
 		const routeKey = `${method} ${routeTemplate}`;
-		const routeConfig: X402RouteConfig = {
-			accepts: {
-				scheme: "exact" as const,
-				price: config.price,
-				network: network,
-				payTo: c.env.PAY_TO as `0x${string}`,
-				maxTimeoutSeconds: 300,
-			},
-			description: config.description,
-		};
-
-		// Add mimeType if specified
-		if (config.mimeType) {
-			routeConfig.mimeType = config.mimeType;
-		}
-
-		// Add Bazaar discovery extension if path params schema is specified
-		if (
-			config.pathParamsSchema ||
-			config.outputExample ||
-			config.serviceName ||
-			config.tags ||
-			config.iconUrl
-		) {
-			const extensionConfig: BazaarExtensionConfig = {};
-
-			// Add path params schema
-			if (config.pathParamsSchema) {
-				extensionConfig.pathParamsSchema = config.pathParamsSchema;
-			}
-
-			// Add output example
-			if (config.outputExample) {
-				extensionConfig.output = { example: config.outputExample };
-			}
-
-			// Add service-level metadata
-			if (config.serviceName) {
-				extensionConfig.serviceName = config.serviceName;
-			}
-			if (config.tags && config.tags.length > 0) {
-				extensionConfig.tags = config.tags;
-			}
-			if (config.iconUrl) {
-				extensionConfig.iconUrl = config.iconUrl;
-			}
-
-			routeConfig.extensions = {
-				...declareDiscoveryExtension(extensionConfig),
-			};
-		}
+		const routeConfig = buildX402RouteConfig(config, c.env);
 
 		const routes = {
 			[routeKey]: routeConfig,
 		};
 
-		// Create payment middleware
-		// Disable facilitator sync on startup to avoid initialization errors
+		// Create payment middleware. Facilitator sync is required so the 402
+		// response includes CDP-supported asset and amount fields for Bazaar.
 		const paymentMw = paymentMiddleware(
 			routes,
 			resourceServer,
 			undefined,
-			undefined,
-			false
+			undefined
 		);
 
 		// Apply the combined auth/payment middleware

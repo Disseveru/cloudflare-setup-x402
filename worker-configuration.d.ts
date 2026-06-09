@@ -9,7 +9,7 @@ declare namespace Cloudflare {
 		PAY_TO: "0x000000000000000000000000000000000000dEaD";
 		NETWORK: "base-sepolia";
 		PROTECTED_PATTERNS: [{"pattern":"/premium/*","price":"$0.01","description":"Access to premium content for 1 hour"}];
-		FACILITATOR_URL: "https://x402.org/facilitator";
+		FACILITATOR_URL: "https://api.cdp.coinbase.com/platform/v2/x402/facilitator";
 	}
 }
 interface CloudflareBindings extends Cloudflare.Env {}
