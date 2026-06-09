@@ -94,7 +94,7 @@ A comprehensive suite of monetized APIs for autonomous agents using the x402 pay
 - **Network:** Base mainnet (EIP-155 chain ID: 8453)
 - **Currency:** USDC
 - **Payment Address:** `0xed7d30e8bc643503f9da261ed8e623bb6ecf6189`
-- **Facilitator:** CDP x402 facilitator at `https://x402.org/facilitator`
+- **Facilitator:** CDP x402 facilitator at `https://api.cdp.coinbase.com/platform/v2/x402/facilitator`
 - **Session Duration:** 1 hour after first payment
 
 ## Compliance
