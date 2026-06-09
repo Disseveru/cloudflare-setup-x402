@@ -8,9 +8,7 @@ import {
 	type ProtectedRouteConfig,
 } from "../src/auth";
 
-const ROOT_ENDPOINT =
-	"https://crsr_b2075f91b8c19946e80b2d891d08058cba4d746f20049fe3c8993700e7bcc13a/";
-
+const ROOT_ENDPOINT = "https://example.com/";
 const TEST_ENV = {
 	JWT_SECRET:
 		"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
