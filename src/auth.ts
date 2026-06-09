@@ -178,7 +178,7 @@ function buildBazaarDiscoveryConfig(
 	config: ProtectedRouteConfig
 ): DeclareDiscoveryExtensionInput {
 	const output =
-		config.outputExample !== undefined || config.outputSchema
+		config.outputExample !== undefined || config.outputSchema !== undefined
 			? {
 					...(config.outputExample !== undefined
 						? { example: config.outputExample }
