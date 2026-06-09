@@ -639,8 +639,8 @@ Before running `npm run deploy`, verify:
 
 This is a **single Cloudflare Worker** project. Only one process is required for local development:
 
-| Service               | Command       | URL                     |
-| --------------------- | ------------- | ----------------------- |
+| Service | Command | URL |
+| ------- | ------- | --- |
 | x402-proxy dev server | `npm run dev` | `http://localhost:8787` |
 
 No Docker, database, or separate backend is needed for unit tests or basic local dev.
@@ -660,12 +660,12 @@ Edit `.dev.vars` to remove the placeholder `JWT_SECRET=your-secret-key-here` lin
 
 See `package.json` scripts and README Quick Start:
 
-| Task                | Command                         |
-| ------------------- | ------------------------------- |
-| Install             | `npm install`                   |
-| Dev server          | `npm run dev`                   |
-| Lint                | `npm run lint`                  |
-| Unit tests          | `npm test`                      |
+| Task | Command |
+| ---- | ------- |
+| Install | `npm install` |
+| Dev server | `npm run dev` |
+| Lint | `npm run lint` |
+| Unit tests | `npm test` |
 | Deploy bundle check | `npx wrangler deploy --dry-run` |
 
 Node.js **18+** is required (CI uses Node 20). There is no separate `build` script; Wrangler bundles on deploy.
@@ -678,13 +678,14 @@ Node.js **18+** is required (CI uses Node 20). There is no separate `build` scri
 
 This does **not** block environment setup. These endpoints work locally without the facilitator:
 
+- `GET /` — service discovery JSON
 - `GET /__x402/health` — health check (200)
 - `GET /__x402/config` — config summary (200)
 
 For local 402 testing, override network/facilitator at dev-server startup:
 
 ```bash
-npx wrangler dev --var NETWORK:base-sepolia --var FACILITATOR_URL:https://api.cdp.coinbase.com/platform/v2/x402/facilitator
+npx wrangler dev --var NETWORK:base-sepolia --var FACILITATOR_URL:https://x402.org/facilitator
 ```
 
 Full payment E2E (`npm run test:client`) additionally requires a funded `PRIVATE_KEY` wallet with testnet USDC.

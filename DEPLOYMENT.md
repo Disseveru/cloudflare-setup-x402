@@ -91,7 +91,7 @@ The configuration in `wrangler.jsonc` follows [CDP Quickstart for Sellers](https
 	"vars": {
 		"PAY_TO": "0xed7d30e8bc643503f9da261ed8e623bb6ecf6189",
 		"NETWORK": "base",
-		"FACILITATOR_URL": "https://api.cdp.coinbase.com/platform/v2/x402/facilitator",
+		"FACILITATOR_URL": "https://x402.org/facilitator",
 	},
 }
 ```
